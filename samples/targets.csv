@@ -1,0 +1,9 @@
+target_id,technique,category,target,must_cover,note
+BVA-age-01,境界値分析,age,age=min-1,Y,
+BVA-age-02,境界値分析,age,age=min,Y,
+BVA-age-03,境界値分析,age,age=max,Y,
+BVA-age-04,境界値分析,age,age=max+1,Y,
+DT-login-01,デシジョンテーブル,login,ルールR01,Y,
+DT-login-02,デシジョンテーブル,login,ルールR02,Y,
+ST-order-01,状態遷移,order,S1->S2(submit),Y,
+EP-plan-01,同値分割,plan,無料プラン,Y,

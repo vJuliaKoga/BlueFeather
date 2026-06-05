@@ -1,0 +1,37 @@
+rubrics:
+  test_plan:
+    - { item_key: scope_clarity,        description: スコープ・対象の明確さ,             max_score: 4, weight: 1.0 }
+    - { item_key: strategy_validity,    description: テスト戦略・アプローチの妥当性,     max_score: 4, weight: 1.2 }
+    - { item_key: risk_identification,  description: リスクの識別と対応方針,             max_score: 4, weight: 1.0 }
+    - { item_key: schedule_feasibility, description: 体制・スケジュールの現実性,         max_score: 4, weight: 0.8 }
+    - { item_key: completion_criteria,  description: 完了基準・合格基準の明確さ,         max_score: 4, weight: 1.0 }
+  requirements:
+    - { item_key: req_coverage,         description: 要件の網羅性,                       max_score: 4, weight: 1.2 }
+    - { item_key: testability,          description: 各要件のテスト可能性,               max_score: 4, weight: 1.2 }
+    - { item_key: ambiguity_removal,    description: 曖昧さ・多義性の排除,               max_score: 4, weight: 1.0 }
+    - { item_key: prioritization,       description: 優先度・重要度の整理,               max_score: 4, weight: 0.8 }
+    - { item_key: traceability,         description: トレーサビリティ,                   max_score: 4, weight: 0.8 }
+  viewpoints:
+    - { item_key: viewpoint_coverage,   description: 観点の網羅性,                       max_score: 4, weight: 1.3 }
+    - { item_key: structuring,          description: 観点の構造化・分類の妥当性,         max_score: 4, weight: 1.0 }
+    - { item_key: technique_assignment, description: 各観点への技法割当の妥当性,         max_score: 4, weight: 1.2 }
+    - { item_key: no_omission_dup,      description: 抜け漏れ・重複のなさ,               max_score: 4, weight: 1.0 }
+  basic_design:
+    - { item_key: technique_selection,  description: 技法選択の妥当性,                   max_score: 4, weight: 1.2 }
+    - { item_key: condition_derivation, description: テスト条件導出の網羅性,             max_score: 4, weight: 1.3 }
+    - { item_key: viewpoint_mapping,    description: 観点との対応づけ,                   max_score: 4, weight: 1.0 }
+    - { item_key: design_consistency,   description: 設計の一貫性,                       max_score: 4, weight: 0.8 }
+  detailed_design:
+    - { item_key: boundary_coverage,    description: 境界値の特定の網羅性,               max_score: 4, weight: 1.5 }
+    - { item_key: branch_coverage,      description: 分岐・デシジョンの網羅性,           max_score: 4, weight: 1.5 }
+    - { item_key: state_transition,     description: 状態遷移の網羅性,                   max_score: 4, weight: 1.0 }
+    - { item_key: expected_clarity,     description: 期待結果の明確さ,                   max_score: 4, weight: 1.0 }
+  testcase_impl:
+    - { item_key: case_concreteness,    description: ケースの具体性・実行可能性,         max_score: 4, weight: 1.0 }
+    - { item_key: boundary_cases,       description: 境界値ケースの網羅,                 max_score: 4, weight: 1.5 }
+    - { item_key: branch_cases,         description: 分岐ケースの網羅,                   max_score: 4, weight: 1.5 }
+    - { item_key: expected_verifiability, description: 期待結果の検証可能性,             max_score: 4, weight: 1.0 }
+  api_automation:
+    - { item_key: automation_selection, description: 自動化対象選定の妥当性,             max_score: 4, weight: 1.0 }
+    - { item_key: assertion_sufficiency, description: アサーションの十分さ,              max_score: 4, weight: 1.2 }
+    - { item_key: maintainability,      description: 保守性・再実行性,                   max_score: 4, weight: 0.8 }

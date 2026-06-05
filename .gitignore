@@ -1,0 +1,6 @@
+/repo-start.log
+/repo-start.cmd
+/scripts/redact-secrets.ps1
+/scripts/repo-start.ps1
+/.deepeval/
+/.venv/

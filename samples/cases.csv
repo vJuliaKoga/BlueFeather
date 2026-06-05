@@ -1,0 +1,7 @@
+test_id,technique,precondition,input,expected,target_ids,note
+T001,境界値分析,,age=17,エラー,BVA-age-01,
+T002,境界値分析,,age=18,OK,BVA-age-02,
+T003,境界値分析,,age=120,OK,BVA-age-03,
+T004,デシジョンテーブル,,正しいID/PW,ログイン成功,DT-login-01,
+T005,状態遷移,下書き,submit,申請中,ST-order-01,
+T006,同値分割,,無料プラン選択,無料機能のみ,EP-plan-01,

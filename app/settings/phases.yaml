@@ -1,0 +1,8 @@
+phases:
+  - { key: test_plan,       name: テスト計画,           order_no: 1, pass_threshold: 80, rubric_weight: 1.0, coverage_weight: 0.0 }
+  - { key: requirements,    name: 要件抽出,             order_no: 2, pass_threshold: 80, rubric_weight: 1.0, coverage_weight: 0.0 }
+  - { key: viewpoints,      name: 観点整理,             order_no: 3, pass_threshold: 80, rubric_weight: 1.0, coverage_weight: 0.0 }
+  - { key: basic_design,    name: 基本設計,             order_no: 4, pass_threshold: 80, rubric_weight: 1.0, coverage_weight: 0.0 }
+  - { key: detailed_design, name: 詳細設計,             order_no: 5, pass_threshold: 80, rubric_weight: 0.7, coverage_weight: 0.3 }
+  - { key: testcase_impl,   name: テストケース実装,     order_no: 6, pass_threshold: 80, rubric_weight: 0.6, coverage_weight: 0.4 }
+  - { key: api_automation,  name: APIテスト・自動化,    order_no: 7, pass_threshold: 80, rubric_weight: 0.4, coverage_weight: 0.6 }
