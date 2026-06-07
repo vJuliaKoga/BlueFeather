@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}BlueFeather{% endblock %}</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="wrap">
+      <span class="brand">BlueFeather — 9人目のメンバー</span>
+      <nav class="globalnav">
+        <a href="/">ダッシュボード</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="wrap">
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap">
+      <p>このツールは、提出前に所見を受け取るための内部レビュー支援です。最終的な判断は、いつもあなたの手の中にあります。</p>
+    </div>
+  </footer>
+</body>
+</html>

@@ -1,4 +1,4 @@
-# BlueWing P4 実装プロンプト（Claude Code 用） v0.1
+# BlueFeather P4 実装プロンプト（Claude Code 用） v0.1
 
 > 対象: 実装フェーズ計画 v0.1 の P4（合算・合否判定・所見合成・ループ／結線）
 > 参照: 詳細設計 v0.2 §5・§6 / ペルソナ定義書 v0.2 §5・§6
@@ -47,7 +47,7 @@ python -c "from app.engine.scoring import compute_rubric_score, compute_total_sc
 #### Task 2: app/engine/gate.py（合否判定・所見合成）
 
 目的：
-閾値比較で合否を決め、BlueWingの語りとスコア行を1本の所見に組む。
+閾値比較で合否を決め、BlueFeatherの語りとスコア行を1本の所見に組む。
 
 対象ファイル：
 - `app/engine/gate.py`

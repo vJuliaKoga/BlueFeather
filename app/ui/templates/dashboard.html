@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}ダッシュボード — BlueFeather{% endblock %}
+
+{% block content %}
+<h1>進捗ダッシュボード</h1>
+<p class="muted">7つのフェーズの現在地です。焦らず、一歩ずつ。</p>
+
+<div class="card">
+  <table>
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>フェーズ</th>
+        <th>状態</th>
+        <th>最新の総合点</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for p in phases %}
+      <tr>
+        <td>{{ p.order_no }}</td>
+        <td>{{ p.name }}</td>
+        <td><span class="status {{ p.status_class }}">{{ p.status_label }}</span></td>
+        <td>{{ p.latest_score }}</td>
+        <td><a href="/phases/{{ p.key }}">開く</a></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

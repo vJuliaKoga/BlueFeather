@@ -1,6 +1,6 @@
-# BlueWing P3 実装プロンプト（Claude Code 用） v0.1
+# BlueFeather P3 実装プロンプト（Claude Code 用） v0.1
 
-> 対象: 実装フェーズ計画 v0.1 の P3（BlueWing語り層・LLM呼び出し・スキーマ検証・フォールバック）
+> 対象: 実装フェーズ計画 v0.1 の P3（BlueFeather語り層・LLM呼び出し・スキーマ検証・フォールバック）
 > 参照: 詳細設計 v0.2 §6 / ペルソナ定義書 v0.2 / prompts.py（作成済み）
 >
 > 各タスクは独立。1タスクずつ Claude Code に渡す。原則1〜2ファイルに限定する。
@@ -96,7 +96,7 @@ prompts.py のメッセージで LLM を呼び、JSONを抽出・検証する。
 ```powershell
 $env:OPENAI_API_KEY = "（各自のキー）"
 python -m app.persona.reviewer --phase detailed_design --artifact samples/artifact.md
-# 期待: status=ok と、BlueWing 口調の acknowledgement の冒頭が表示される
+# 期待: status=ok と、BlueFeather 口調の acknowledgement の冒頭が表示される
 ```
 
 ---

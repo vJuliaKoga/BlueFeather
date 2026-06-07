@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block title %}所見 — BlueFeather{% endblock %}
+
+{% block content %}
+<h1>BlueFeather からの所見</h1>
+<p class="muted">{{ phase.name }} ／ R{{ round_no }}</p>
+
+{% if status == "manual_check" %}
+<div class="card">
+  <p>この回は自動採点を保留しました（要手動確認）。文面の生成がうまく整わなかっただけで、あなたの成果物に問題があったわけではありません。少し時間をおいて、もう一度提出してみてください。</p>
+</div>
+{% else %}
+<div class="score-line {{ status_class }}">{{ score_line }}</div>
+
+<div class="review-text">{{ review_text }}</div>
+
+{% if recommendations %}
+<h2>技法レコメンド</h2>
+<div class="card">
+  <table>
+    <thead><tr><th>対象</th><th>おすすめの技法</th><th>理由</th></tr></thead>
+    <tbody>
+      {% for r in recommendations %}
+      <tr><td>{{ r.target }}</td><td>{{ r.recommended_technique }}</td><td>{{ r.reason }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+{% if coverage_target and coverage_metrics %}
+<h2>カバレッジ内訳</h2>
+<div class="card">
+  <table>
+    <thead><tr><th>技法</th><th>covered</th><th>total</th><th>rate</th></tr></thead>
+    <tbody>
+      {% for c in coverage_metrics %}
+      <tr>
+        <td>{{ c.technique }}</td>
+        <td>{{ c.covered }}</td>
+        <td>{{ c.total }}</td>
+        <td>{{ "%.2f"|format(c.rate) }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+{% if rubric_breakdown %}
+<h2>ルーブリック項目別の内訳</h2>
+<div class="card">
+  {% for item in rubric_breakdown %}
+  <details>
+    <summary>{{ item.item_key }} — {{ item.score }}/{{ item.max_score }}</summary>
+    <p>{{ item.rationale }}</p>
+    {% if item.findings %}
+    <ul>{% for f in item.findings %}<li>{{ f }}</li>{% endfor %}</ul>
+    {% endif %}
+  </details>
+  {% endfor %}
+</div>
+{% endif %}
+{% endif %}
+
+<p><a href="/phases/{{ phase.key }}">← {{ phase.name }} に戻る</a></p>
+{% endblock %}

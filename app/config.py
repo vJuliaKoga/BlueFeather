@@ -9,7 +9,7 @@ from dataclasses import dataclass
 
 # モデル名の既定値はここ1か所で差し替え可能にする（コードに最終決定値を散らさない）。
 DEFAULT_OPENAI_MODEL = "gpt-4o-mini"
-DEFAULT_DB_PATH = "bluewing.db"
+DEFAULT_DB_PATH = "bluefeather.db"
 
 
 class ConfigError(Exception):
@@ -36,5 +36,5 @@ def get_settings() -> Settings:
     return Settings(
         openai_api_key=api_key,
         openai_model=os.environ.get("OPENAI_MODEL") or DEFAULT_OPENAI_MODEL,
-        db_path=os.environ.get("BLUEWING_DB_PATH") or DEFAULT_DB_PATH,
+        db_path=os.environ.get("BLUEFEATHER_DB_PATH") or DEFAULT_DB_PATH,
     )

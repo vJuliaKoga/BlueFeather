@@ -1,4 +1,4 @@
-"""BlueWing 語り層の呼び出し・抽出・検証・フォールバック（詳細設計§6.4）。
+"""BlueFeather 語り層の呼び出し・抽出・検証・フォールバック（詳細設計§6.4）。
 
 LLM を呼び、JSON を抽出・検証する。失敗時は安全に逃がす（落とさない）。
 合否判定・total_score・coverage_score はここでは出さない（P4）。
@@ -116,7 +116,7 @@ def run_review(
 
 
 def _main() -> None:
-    parser = argparse.ArgumentParser(description="BlueWing 語り層レビュー（実呼び出し）")
+    parser = argparse.ArgumentParser(description="BlueFeather 語り層レビュー（実呼び出し）")
     parser.add_argument("--phase", required=True, help="フェーズキー（例: detailed_design）")
     parser.add_argument("--artifact", required=True, help="成果物 md のパス")
     parser.add_argument("--coverage", default=None, help="参考カバレッジ要約（任意）")

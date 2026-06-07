@@ -1,4 +1,4 @@
--- BlueWing SQLite スキーマ（詳細設計§7）。再実行で壊れないよう IF NOT EXISTS を付ける。
+-- BlueFeather SQLite スキーマ（詳細設計§7）。再実行で壊れないよう IF NOT EXISTS を付ける。
 
 CREATE TABLE IF NOT EXISTS phases (
   id INTEGER PRIMARY KEY, key TEXT UNIQUE, name TEXT, order_no INTEGER,

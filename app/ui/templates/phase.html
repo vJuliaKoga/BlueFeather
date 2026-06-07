@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block title %}{{ phase.name }} — BlueFeather{% endblock %}
+
+{% block content %}
+<h1>{{ phase.name }}</h1>
+<p class="muted">合格ライン：{{ phase.pass_threshold }}点</p>
+
+{% if errors %}
+<div class="errors">
+  <strong>提出を一度お預かりしました。次の点を整えてから、もう一度どうぞ。</strong>
+  <ul>
+    {% for m in errors %}<li>{{ m }}</li>{% endfor %}
+  </ul>
+</div>
+{% endif %}
+
+<h2>ルーブリック項目</h2>
+<div class="card">
+  <table>
+    <thead>
+      <tr><th>項目</th><th>説明</th><th>最大点</th><th>重み</th></tr>
+    </thead>
+    <tbody>
+      {% for it in rubric_items %}
+      <tr>
+        <td>{{ it.item_key }}</td>
+        <td>{{ it.description }}</td>
+        <td>{{ it.max_score }}</td>
+        <td>{{ it.weight }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<h2>成果物の提出</h2>
+<div class="card">
+  <form method="post" action="/phases/{{ phase.key }}/submit" enctype="multipart/form-data">
+    <label for="body">成果物本文</label>
+    <textarea id="body" name="body" required>{{ submitted_body or "" }}</textarea>
+
+    <label for="submitted_by">提出者名</label>
+    <input type="text" id="submitted_by" name="submitted_by" value="{{ submitted_by or "" }}" required>
+
+    {% if coverage_target %}
+    <label for="targets">targets ファイル（CSV）</label>
+    <input type="file" id="targets" name="targets" accept=".csv">
+
+    <label for="cases">cases ファイル（CSV）</label>
+    <input type="file" id="cases" name="cases" accept=".csv">
+    <p class="muted">このフェーズはカバレッジ対象です。targets / cases を添えると内訳も算出します。</p>
+    {% endif %}
+
+    <button type="submit">提出して所見を受け取る</button>
+  </form>
+</div>
+
+<h2>ラウンド履歴</h2>
+<div class="card">
+  {% if history %}
+  <table>
+    <thead>
+      <tr><th>ラウンド</th><th>総合点</th><th>状態</th><th></th></tr>
+    </thead>
+    <tbody>
+      {% for h in history %}
+      <tr>
+        <td>R{{ h.round_no }}</td>
+        <td>{{ h.score_disp }}</td>
+        <td><span class="status {{ h.status_class }}">{{ h.status_label }}</span></td>
+        <td><a href="/reviews/{{ h.review_id }}">所見を見る</a></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="muted">まだ提出はありません。最初の一歩を、いつでもどうぞ。</p>
+  {% endif %}
+</div>
+{% endblock %}

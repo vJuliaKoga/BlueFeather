@@ -1,4 +1,4 @@
-# BlueWing P2 実装プロンプト（Claude Code 用） v0.1
+# BlueFeather P2 実装プロンプト（Claude Code 用） v0.1
 
 > 対象: 実装フェーズ計画 v0.1 の P2（CSV/Excel取込 ＋ 定量カバレッジ計算・関守エンジン）
 > 参照: 詳細設計 v0.2 §2（入力フォーマット）・§3（カバレッジ計算）

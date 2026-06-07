@@ -1,9 +1,9 @@
-# BlueWing　詳細設計 v0.2
+# BlueFeather　詳細設計 v0.2
 
-> 対象企画書: BlueWing 企画書 v0.3
+> 対象企画書: BlueFeather 企画書 v0.3
 > 前提: テストケース入力 = 構造化CSV/Excel、UI = Jinja2サーバレンダリング
 >
-> **v0.2の変更点**：名称をBlueWingに統一。決定的計算・判定を「関守エンジン」、所見の文面生成を「BlueWing語り層」として明確に分離。合否は「あと一歩／開門」で表現。
+> **v0.2の変更点**：名称をBlueFeatherに統一。決定的計算・判定を「関守エンジン」、所見の文面生成を「BlueFeather語り層」として明確に分離。合否は「あと一歩／開門」で表現。
 >
 > 配点・重み・閾値の初期値は調整前提の「ドラフト」。
 
@@ -12,7 +12,7 @@
 ## 1. モジュール構成
 
 ```
-bluewing/
+bluefeather/
 ├─ app/
 │   ├─ main.py                 # FastAPIエントリ・ルーティング
 │   ├─ config.py               # 環境変数・設定読込（APIキーは保持しない）
@@ -28,7 +28,7 @@ bluewing/
 │   │   ├─ coverage.py          # 定量カバレッジ計算
 │   │   ├─ scoring.py           # 総合点の合算
 │   │   └─ gate.py              # 合否判定（あと一歩／開門）・ループ制御
-│   ├─ persona/                # BlueWing 語り層（LLM）
+│   ├─ persona/                # BlueFeather 語り層（LLM）
 │   │   ├─ reviewer.py          # ルーブリック採点・技法レコメンド呼び出し
 │   │   ├─ prompts.py           # ペルソナ定義書を反映したシステムプロンプト
 │   │   └─ schema.py            # 出力JSONスキーマ（pydantic）
@@ -39,7 +39,7 @@ bluewing/
 └─ README.md
 ```
 
-設計原則: カバレッジ・重み付き合算（rubric_score / total_score）・合否判定は **関守エンジン（engine/）** が決定的に行う。各ルーブリック項目の定性スコア（0〜max）と、所見・指摘・技法レコメンドの **文面** は **BlueWing語り層（persona/）** が担う。総合点・カバレッジ点・合否判定はLLMに出させない。
+設計原則: カバレッジ・重み付き合算（rubric_score / total_score）・合否判定は **関守エンジン（engine/）** が決定的に行う。各ルーブリック項目の定性スコア（0〜max）と、所見・指摘・技法レコメンドの **文面** は **BlueFeather語り層（persona/）** が担う。総合点・カバレッジ点・合否判定はLLMに出させない。
 
 ## 2. テストケース入力フォーマット（CSV/Excel）
 
@@ -101,7 +101,7 @@ coverage_score = 100 × Σ(weight_t × coverage_rate_t) / Σ(weight_t)   ※ tot
 
 ## 4. ルーブリック設計（settings/rubrics.yaml）
 
-各項目は `max_score`（例: 0〜4）と `weight` を持つ。LLM（BlueWing語り層）が項目ごとに根拠つきで採点し、関守エンジンが加重して `rubric_score`（0〜100）を決定的に算出する。
+各項目は `max_score`（例: 0〜4）と `weight` を持つ。LLM（BlueFeather語り層）が項目ごとに根拠つきで採点し、関守エンジンが加重して `rubric_score`（0〜100）を決定的に算出する。
 
 ```
 rubric_score = 100 × Σ(weight_i × score_i / max_score_i) / Σ(weight_i)
@@ -147,10 +147,10 @@ total_score = rubric_weight × rubric_score + coverage_weight × coverage_score
 
 - `total_score >= 合格閾値` → `gate_status.closed=1` → 次フェーズ解放（**開門**）。
 - `total_score < 合格閾値` → クローズせず、**「あと一歩」** として現在地と不足点を返す。人が修正し ラウンドN+1 を提出。
-- 「あと一歩／開門」の判定は **関守エンジンが決定的に行い**、BlueWingはその結果を語り口で包む（数値判定をLLMに委ねない）。
+- 「あと一歩／開門」の判定は **関守エンジンが決定的に行い**、BlueFeatherはその結果を語り口で包む（数値判定をLLMに委ねない）。
 - フェーズは `order_no` 順。前フェーズが未クローズだと次フェーズの提出はできない（任意で緩める設定も可）。
 
-## 6. BlueWing 語り層（persona/）
+## 6. BlueFeather 語り層（persona/）
 
 ### 6.1 役割
 
@@ -161,7 +161,7 @@ total_score = rubric_weight × rubric_score + coverage_weight × coverage_score
 
 ### 6.2 システムプロンプト
 
-`persona/prompts.py` に、**BlueWing ペルソナ定義書 v0.2** を反映したシステムプロンプトを置く。語り口・話法・禁止表現・所見テンプレートはペルソナ定義書に準拠する。
+`persona/prompts.py` に、**BlueFeather ペルソナ定義書 v0.2** を反映したシステムプロンプトを置く。語り口・話法・禁止表現・所見テンプレートはペルソナ定義書に準拠する。
 
 ### 6.3 出力JSONスキーマ（pydanticで検証）
 
@@ -170,7 +170,7 @@ total_score = rubric_weight × rubric_score + coverage_weight × coverage_score
   "phase": "detailed_design",
   "rubric_scores": [
     { "item_key": "boundary_coverage", "score": 3, "max_score": 4,
-      "rationale": "BlueWingの語り口での根拠", "findings": ["指摘1", "指摘2"] }
+      "rationale": "BlueFeatherの語り口での根拠", "findings": ["指摘1", "指摘2"] }
   ],
   "technique_recommendations": [
     { "target": "年齢入力欄", "recommended_technique": "境界値分析", "reason": "範囲制約があるため" }
@@ -243,7 +243,7 @@ CREATE TABLE gate_status (
 
 - `OPENAI_API_KEY`: 環境変数から読み込む。未設定なら起動時に明示エラーで停止。ファイルには書かない。
 - `OPENAI_MODEL`: 環境変数で指定（設定で切替可能）。コードに固定しない。
-- `BLUEWING_DB_PATH`: SQLiteの保存先（既定値あり）。
+- `BLUEFEATHER_DB_PATH`: SQLiteの保存先（既定値あり）。
 - 閾値・重み・ルーブリックは `settings/*.yaml`（キー類は一切含めない）。
 
 PowerShell例:
@@ -263,7 +263,7 @@ $env:OPENAI_MODEL   = "（使用モデル名）"
 
 - P1: 雛形・config・SQLiteスキーマ投入（YAML→DB）
 - P2: CSV/Excel取込＋定量カバレッジ計算（関守エンジン、単体テスト付き）
-- P3: BlueWing語り層＋LLM出力スキーマ検証＋フォールバック
+- P3: BlueFeather語り層＋LLM出力スキーマ検証＋フォールバック
 - P4: 総合点合算＋合否判定＋所見合成＋ループ制御
 - P5: FastAPIエンドポイント＋Jinja2 UI
 - P6: 通し動作確認（1フェーズ分のサンプルで提出〜開門まで）

@@ -1,4 +1,4 @@
-# BlueWing
+# BlueFeather
 
 テスト設計の各フェーズを採点・ゲート判定する、各自ローカル型のツールです。
 このドキュメントは導入〜DB初期化までの手順をまとめたものです（コマンドは PowerShell 前提）。
@@ -38,7 +38,7 @@ setx OPENAI_API_KEY "（各自のキー）"
 
 ```powershell
 $env:OPENAI_MODEL    = "（使用モデル名）"   # 未指定なら既定値
-$env:BLUEWING_DB_PATH = "bluewing.db"       # 未指定なら bluewing.db
+$env:BLUEFEATHER_DB_PATH = "bluefeather.db"       # 未指定なら bluefeather.db
 ```
 
 ## DB初期化

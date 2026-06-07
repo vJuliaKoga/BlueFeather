@@ -1,6 +1,6 @@
-# BlueWing 実装フェーズ計画（Phase task list） v0.1
+# BlueFeather 実装フェーズ計画（Phase task list） v0.1
 
-> 対象: BlueWing 企画書 v0.3 / 詳細設計 v0.2 / ペルソナ定義書 v0.2 / prompts.py
+> 対象: BlueFeather 企画書 v0.3 / 詳細設計 v0.2 / ペルソナ定義書 v0.2 / prompts.py
 > 前提:
 > - 動かし方は **各自ローカル型**（各自で導入＋各自のOPENAI_API_KEY、履歴はローカルSQLiteに分散）
 > - 環境は **Windows / PowerShell**、実装は **VSCode拡張のClaude Code**
@@ -31,7 +31,7 @@
   pydantic
   pytest
   ```
-- `app/config.py`: 環境変数読込。`OPENAI_API_KEY` 未設定なら明示エラーで停止。`OPENAI_MODEL`・`BLUEWING_DB_PATH` も環境変数/既定値から。**キーは保持・出力しない。**
+- `app/config.py`: 環境変数読込。`OPENAI_API_KEY` 未設定なら明示エラーで停止。`OPENAI_MODEL`・`BLUEFEATHER_DB_PATH` も環境変数/既定値から。**キーは保持・出力しない。**
 - `app/db/schema.sql`（詳細設計§7のDDL）。
 - `app/settings/phases.yaml` `rubrics.yaml`（§4・§5の配点・閾値ドラフトを投入）。
 - 起動時にYAML→DBへ投入（既存なら差分更新）する初期化処理。
@@ -56,7 +56,7 @@ $env:OPENAI_API_KEY = "（各自のキー）"
 python -m app.db.init
 
 # テーブル確認
-python -c "import sqlite3,os; c=sqlite3.connect(os.environ.get('BLUEWING_DB_PATH','bluewing.db')); print([r[0] for r in c.execute('select name from sqlite_master where type=\""table\""')])"
+python -c "import sqlite3,os; c=sqlite3.connect(os.environ.get('BLUEFEATHER_DB_PATH','bluefeather.db')); print([r[0] for r in c.execute('select name from sqlite_master where type=\""table\""')])"
 ```
 
 ### 成果物
@@ -91,7 +91,7 @@ testcase_loader.py、coverage.py、テスト、samples/
 
 ---
 
-## P3: BlueWing語り層（LLM呼び出し・スキーマ検証・フォールバック）
+## P3: BlueFeather語り層（LLM呼び出し・スキーマ検証・フォールバック）
 
 ### ゴール
 prompts.py を使って、ルーブリック項目の定性スコア＋語りの文面をJSONで安全に得られる。
@@ -122,7 +122,7 @@ prompts.py、schema.py、reviewer.py、テスト
 ## P4: 合算・合否判定・所見合成・ループ（関守エンジン）
 
 ### ゴール
-定性スコア＋カバレッジから総合点・合否を決定的に出し、BlueWingの所見として合成できる。
+定性スコア＋カバレッジから総合点・合否を決定的に出し、BlueFeatherの所見として合成できる。
 
 ### タスク
 - `app/engine/scoring.py`: `rubric_score`（項目スコア×重み）、`total_score`（§5.1）。
@@ -149,7 +149,7 @@ scoring.py、gate.py、所見合成、テスト
 ## P5: FastAPI ＋ Jinja2 UI
 
 ### ゴール
-ブラウザから成果物を提出し、BlueWingの所見を読める。
+ブラウザから成果物を提出し、BlueFeatherの所見を読める。
 
 ### タスク
 - `app/main.py`: §8のエンドポイント（`/`、`/phases/{key}`、`/phases/{key}/submit`、`/reviews/{id}`、`/rubrics/{key}`）。
