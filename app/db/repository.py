@@ -249,3 +249,98 @@ def get_coverage_metrics(conn: sqlite3.Connection, review_id: int) -> list[dict]
         {"technique": r[0], "total": r[1], "covered": r[2], "rate": r[3], "weight": r[4]}
         for r in rows
     ]
+
+
+# --- QA4AI（レビューAIの出力点検）---------------------------------------------
+
+def ensure_qa4ai_table(conn: sqlite3.Connection) -> None:
+    """既存DBにも qa4ai_results を用意する（CREATE TABLE IF NOT EXISTS）。"""
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS qa4ai_results ("
+        " id INTEGER PRIMARY KEY, review_id INTEGER REFERENCES reviews(id),"
+        " check_type TEXT, result_json TEXT, created_at TEXT)"
+    )
+
+
+def insert_qa4ai_result(
+    conn: sqlite3.Connection,
+    review_id: int,
+    check_type: str,
+    result_json: str,
+    created_at: str,
+) -> None:
+    conn.execute(
+        "INSERT INTO qa4ai_results (review_id, check_type, result_json, created_at) "
+        "VALUES (?, ?, ?, ?)",
+        (review_id, check_type, result_json, created_at),
+    )
+
+
+def get_qa4ai_results(conn: sqlite3.Connection, review_id: int) -> dict[str, dict]:
+    """check_type ごとに最新の結果（result_json を展開）を返す。無ければ空 dict。"""
+    rows = conn.execute(
+        "SELECT check_type, result_json, created_at FROM qa4ai_results "
+        "WHERE review_id = ? ORDER BY id ASC",
+        (review_id,),
+    ).fetchall()
+    # 同じ check_type は後勝ち（最新の実行結果を採用）。
+    latest: dict[str, dict] = {}
+    import json as _json
+    for r in rows:
+        latest[r[0]] = {"result": _json.loads(r[1]), "created_at": r[2]}
+    return latest
+
+
+def get_last_two_reviews(conn: sqlite3.Connection, phase_key: str) -> list[dict]:
+    """フェーズの直近2レビューを round_no 降順で返す（最大2件・前回比較用）。
+
+    rubric_breakdown は JSON 文字列のまま返す（呼び出し側で必要時に展開）。
+    2件未満なら、ある分だけ返す（呼び出し側で「比較不可」を判断）。
+    """
+    rows = conn.execute(
+        "SELECT r.id, a.round_no, r.rubric_score, r.coverage_score, r.total_score, "
+        "       r.status, r.rubric_breakdown "
+        "FROM reviews r JOIN artifacts a ON r.artifact_id = a.id "
+        "JOIN phases p ON a.phase_id = p.id "
+        "WHERE p.key = ? ORDER BY a.round_no DESC, r.id DESC LIMIT 2",
+        (phase_key,),
+    ).fetchall()
+    return [
+        {
+            "review_id": r[0], "round_no": r[1], "rubric_score": r[2],
+            "coverage_score": r[3], "total_score": r[4], "status": r[5],
+            "rubric_breakdown": r[6],
+        }
+        for r in rows
+    ]
+
+
+def get_previous_phase_artifact_body(conn: sqlite3.Connection, phase_id: int) -> str | None:
+    """order_no が手前のフェーズで最後に提出された成果物本文を返す（無ければ None）。
+
+    レビュー時の参考コンテキスト用。直前フェーズが未提出なら、さらに手前で提出済みの
+    最も近いフェーズの最新ラウンドを採用する。
+    """
+    row = conn.execute(
+        "SELECT a.body FROM artifacts a "
+        "JOIN phases p ON a.phase_id = p.id "
+        "WHERE p.order_no < (SELECT order_no FROM phases WHERE id = ?) "
+        "ORDER BY p.order_no DESC, a.round_no DESC LIMIT 1",
+        (phase_id,),
+    ).fetchone()
+    return row[0] if row else None
+
+
+def get_artifact(conn: sqlite3.Connection, artifact_id: int) -> dict | None:
+    """artifact を id で取得（提出者・日時の取得に使う）。"""
+    row = conn.execute(
+        "SELECT id, phase_id, round_no, body, testcase_file_path, submitted_by, submitted_at "
+        "FROM artifacts WHERE id = ?",
+        (artifact_id,),
+    ).fetchone()
+    if row is None:
+        return None
+    return {
+        "id": row[0], "phase_id": row[1], "round_no": row[2], "body": row[3],
+        "testcase_file_path": row[4], "submitted_by": row[5], "submitted_at": row[6],
+    }

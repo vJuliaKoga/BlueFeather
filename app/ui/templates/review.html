@@ -4,6 +4,7 @@
 {% block content %}
 <h1>BlueFeather からの所見</h1>
 <p class="muted">{{ phase.name }} ／ R{{ round_no }}</p>
+<p><a class="btn btn-outline" href="/reviews/{{ review_id }}/pdf">PDFで保存</a></p>
 
 {% if status == "manual_check" %}
 <div class="card">
@@ -61,6 +62,108 @@
   {% endfor %}
 </div>
 {% endif %}
+{% endif %}
+
+{% if round_no > 1 %}
+<h2>前回との比較</h2>
+<div class="card">
+  {% if comparison and comparison.comparable %}
+  <p>{{ comparison.summary }}</p>
+
+  {% if comparison.improved %}
+  <p><span class="status status-open">良くなった</span>　{{ comparison.improved|join("・") }}</p>
+  {% endif %}
+
+  {% if comparison.degraded %}
+  <p><span class="status status-near">少し戻った</span></p>
+  <table>
+    <thead><tr><th>項目</th><th>前回</th><th>今回</th></tr></thead>
+    <tbody>
+      {% for k in comparison.degraded %}
+      <tr>
+        <td>{{ k }}</td>
+        {% if k in comparison.item_deltas %}
+        <td>{{ comparison.item_deltas[k].prev }}</td>
+        <td>{{ comparison.item_deltas[k].cur }}</td>
+        {% else %}
+        <td>{{ "%.2f"|format(comparison.coverage_deltas[k].prev) }}</td>
+        <td>{{ "%.2f"|format(comparison.coverage_deltas[k].cur) }}</td>
+        {% endif %}
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+
+  {% set td = comparison.score_deltas.total_score %}
+  {% set cd = comparison.score_deltas.coverage_score %}
+  <p class="muted">
+    {% if td.delta is not none %}総合点 {{ "%.1f"|format(td.prev) }} → {{ "%.1f"|format(td.cur) }}（{{ "%+.1f"|format(td.delta) }}）{% endif %}
+    {% if cd.delta is not none %}／ カバレッジ点 {{ "%.1f"|format(cd.prev) }} → {{ "%.1f"|format(cd.cur) }}（{{ "%+.1f"|format(cd.delta) }}）{% endif %}
+  </p>
+  {% else %}
+  <p class="muted">{{ comparison.reason if comparison else "前回がまだ無いため、比較はありません。" }}</p>
+  {% endif %}
+</div>
+{% endif %}
+
+{% if status == "ok" %}
+<h2>QA4AI（レビューの点検）</h2>
+<div class="card">
+  <p class="muted">この所見自体を点検します（ルール遵守・指摘の根拠・別LLMによる採点）。本体のスコアや合否は変わりません。</p>
+  <form method="post" action="/reviews/{{ review_id }}/qa4ai">
+    <button type="submit">QA4AIで点検する</button>
+  </form>
+
+  {% if qa4ai %}
+  {% if qa4ai.rule %}
+  <h3>ルール遵守</h3>
+  {% set v = qa4ai.rule.result.violations %}
+  {% if v %}
+  <ul>{% for m in v %}<li><span class="status status-near">違反</span> {{ m }}</li>{% endfor %}</ul>
+  {% else %}
+  <p><span class="status status-open">違反なし</span></p>
+  {% endif %}
+  {% endif %}
+
+  {% if qa4ai.grounding %}
+  <h3>根拠の妥当性</h3>
+  <table>
+    <thead><tr><th>指摘</th><th>根拠</th><th>理由</th></tr></thead>
+    <tbody>
+      {% for it in qa4ai.grounding.result['items'] %}
+      <tr>
+        <td>{{ it.finding }}</td>
+        <td>
+          {% if it.grounded is none %}<span class="status status-todo">判定保留</span>
+          {% elif it.grounded %}<span class="status status-open">あり</span>
+          {% else %}<span class="status status-near">なし</span>{% endif %}
+        </td>
+        <td>{{ it.reason }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+
+  {% if qa4ai.judge %}
+  <h3>LLM-as-judge</h3>
+  {% set j = qa4ai.judge.result %}
+  {% if j.status == "ok" %}
+  <ul>
+    <li>具体性: {{ j.specificity }}/4</li>
+    <li>実行可能性: {{ j.actionability }}/4</li>
+    <li>ペルソナ遵守: {{ j.persona_adherence }}/4</li>
+    <li>点数・合否の非漏洩: {{ j.no_score_leak }}/4</li>
+  </ul>
+  {% if j.comment %}<p>{{ j.comment }}</p>{% endif %}
+  {% if j.overall %}<p>総評: {{ j.overall }}</p>{% endif %}
+  {% else %}
+  <p class="muted">{{ j.reason }}</p>
+  {% endif %}
+  {% endif %}
+  {% endif %}
+</div>
 {% endif %}
 
 <p><a href="/phases/{{ phase.key }}">← {{ phase.name }} に戻る</a></p>

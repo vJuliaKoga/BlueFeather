@@ -6,8 +6,6 @@
 
 from __future__ import annotations
 
-from app.persona.schema import TechniqueRecommendation
-
 # スコア行テンプレート（調整可能な定数）。
 OPEN_GATE_TEMPLATE = "{score}点。ここで関門は開きますよ。よくやりましたね。"
 ALMOST_TEMPLATE = "いま{score}点。合格ラインの{threshold}点まで、あと一歩というところです。"
@@ -31,15 +29,26 @@ def compose_review(
     acknowledgement: str,
     score_line: str,
     overall_findings: list[str],
-    technique_recommendations: list[TechniqueRecommendation],
     closing: str,
+    addressee: str | None = None,
 ) -> str:
-    """ペルソナ定義書§5の順で1本の所見に組む。スコア行以外に点数は足さない。"""
+    """ペルソナ定義書§5の順で1本の所見に組む。スコア行以外に点数は足さない。
+
+    技法レコメンドは画面・PDF・エクスポートの専用セクションに一本化したため、ここでは
+    本文に重ねない。addressee（担当者名）があれば冒頭で「〇〇さん、」と呼びかける。
+    """
     parts: list[str] = []
 
-    # 1. 承認
-    if acknowledgement:
-        parts.append(acknowledgement)
+    # 1. 承認（担当者名があれば「〇〇さん、」と呼びかけてから）
+    ack = acknowledgement or ""
+    if addressee:
+        name = addressee.strip()
+        if name.endswith("さん"):
+            name = name[:-2]  # 二重「さん」を避ける
+        if name:
+            ack = f"{name}さん、{ack}" if ack else f"{name}さん。"
+    if ack:
+        parts.append(ack)
 
     # 2. スコア行
     if score_line:
@@ -50,15 +59,7 @@ def compose_review(
     if findings:
         parts.append("\n".join(f"・{f}" for f in findings))
 
-    # 4. 技法レコメンド（あれば簡潔に）
-    if technique_recommendations:
-        lines = [
-            f"・この観点なら、{r.target}には{r.recommended_technique}が合うのではないかな（{r.reason}）。"
-            for r in technique_recommendations
-        ]
-        parts.append("\n".join(lines))
-
-    # 5. 委ねる結び
+    # 4. 委ねる結び
     if closing:
         parts.append(closing)
 

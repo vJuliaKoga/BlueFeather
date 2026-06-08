@@ -6,4 +6,5 @@ openai
 pyyaml
 openpyxl
 pydantic
+reportlab
 pytest

@@ -130,6 +130,26 @@ button {
 }
 button:hover { background: #355d86; }
 
+/* リンクをボタン表示にする（GETのダウンロード等） */
+.btn {
+  display: inline-block;
+  padding: 9px 18px;
+  border-radius: 8px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 0.95rem;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+}
+.btn:hover { background: #355d86; color: #fff; }
+.btn-outline {
+  background: transparent;
+  color: var(--accent);
+  border: 1px solid var(--accent);
+}
+.btn-outline:hover { background: var(--accent-soft); color: var(--accent); }
+
 .muted { color: var(--muted); }
 .errors {
   background: var(--near-bg);

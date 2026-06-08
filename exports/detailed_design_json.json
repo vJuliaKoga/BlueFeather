@@ -1,0 +1,10 @@
+{
+  "phase": {
+    "key": "detailed_design",
+    "name": "詳細設計",
+    "pass_threshold": 80.0,
+    "rubric_weight": 0.7,
+    "coverage_weight": 0.3
+  },
+  "rounds": []
+}

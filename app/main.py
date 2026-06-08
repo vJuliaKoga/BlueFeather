@@ -8,23 +8,30 @@ from __future__ import annotations
 
 import json
 import uuid
+from datetime import datetime, timezone
 from pathlib import Path
 
 from fastapi import FastAPI, File, Form, Request, UploadFile
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from app.db import repository
 from app.db.repository import get_connection
+from app.engine.compare import compare_phase
+from app.engine.export import export_phase
+from app.engine.pdf_export import build_review_pdf
 from app.engine.gate import compose_review, judge
 from app.engine.pipeline import run_phase_review
 from app.ingest.testcase_loader import TestcaseValidationError
 from app.persona.schema import TechniqueRecommendation
+from app.qa4ai import grounding, rule_check
+from app.qa4ai import judge as qa_judge
 
 _BASE_DIR = Path(__file__).resolve().parent
 _TEMPLATES = Jinja2Templates(directory=str(_BASE_DIR / "ui" / "templates"))
 _UPLOAD_DIR = Path("uploads")
+_EXPORT_DIR = Path("exports")
 
 app = FastAPI(title="BlueFeather")
 app.mount("/static", StaticFiles(directory=str(_BASE_DIR / "ui" / "static")), name="static")
@@ -73,7 +80,8 @@ def _build_phase_context(conn, phase: dict) -> dict:
     return {
         "phase": phase,
         "rubric_items": repository.get_rubric_items_full(conn, phase["id"]),
-        "coverage_target": phase["coverage_weight"] > 0,
+        # カバレッジ対象フェーズだけアップロード欄を出すためのフラグ。
+        "coverage_enabled": phase["coverage_weight"] > 0,
         "history": history,
     }
 
@@ -108,28 +116,61 @@ def phase_detail(request: Request, key: str):
         phase = repository.get_phase(conn, key)
         if phase is None:
             return HTMLResponse(f"未知のフェーズです: {key}", status_code=404)
+        phase["key"] = key  # テンプレートのフォーム/エクスポートリンクで使う。
         ctx = _build_phase_context(conn, phase)
     finally:
         conn.close()
     return _TEMPLATES.TemplateResponse(request, "phase.html", ctx)
 
 
-async def _save_upload(upload: UploadFile | None) -> str | None:
-    """アップロードを uploads/ に保存しパスを返す。空なら None。"""
+@app.get("/phases/{key}/export")
+def export_phase_file(key: str, format: str = "md"):
+    """フェーズ履歴を export.py で生成し、ファイルとしてダウンロードさせる。"""
+    if format not in ("md", "json"):
+        return HTMLResponse(f"未知のフォーマットです: {format}", status_code=400)
+    conn = get_connection()
+    try:
+        if repository.get_phase(conn, key) is None:
+            return HTMLResponse(f"未知のフェーズです: {key}", status_code=404)
+    finally:
+        conn.close()
+
+    # 集計・整形は export.py 側で完結（画面側で再採点しない）。
+    file_path = export_phase(key, format, str(_EXPORT_DIR))
+    media_type = "application/json" if format == "json" else "text/markdown"
+    # filename を渡すと Content-Disposition: attachment が付き、ダウンロードになる。
+    return FileResponse(file_path, media_type=media_type, filename=Path(file_path).name)
+
+
+async def _save_upload(upload: UploadFile | None, key: str) -> str | None:
+    """アップロードを uploads/ に保存しパスを返す。空なら None。控えとして残す。"""
     if upload is None or not upload.filename:
         return None
-    # 衝突回避のため接頭辞に短いランダム値を付ける。
-    dest = _UPLOAD_DIR / f"{uuid.uuid4().hex[:8]}_{Path(upload.filename).name}"
+    # 日時＋フェーズキー＋短いランダム値で一意化（控えを残す・衝突回避）。
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    name = f"{stamp}_{key}_{uuid.uuid4().hex[:8]}_{Path(upload.filename).name}"
+    dest = _UPLOAD_DIR / name
     dest.write_bytes(await upload.read())
     return str(dest)
+
+
+def _bad_extension(upload: UploadFile | None, allowed: set[str]) -> str | None:
+    """拡張子が不正なら誘導メッセージを返す。未指定・空欄は検証対象外（None）。"""
+    if upload is None or not upload.filename:
+        return None
+    if Path(upload.filename).suffix.lower() not in allowed:
+        exts = " / ".join(sorted(allowed))
+        return f"{upload.filename}: 対応していない拡張子です（{exts} を指定してください）"
+    return None
 
 
 @app.post("/phases/{key}/submit")
 async def submit_phase(
     request: Request,
     key: str,
-    body: str = Form(...),
+    body: str = Form(""),  # Excel/CSV を成果物として出す場合は任意。
     submitted_by: str = Form(...),
+    workbook: UploadFile | None = File(None),
     targets: UploadFile | None = File(None),
     cases: UploadFile | None = File(None),
 ):
@@ -138,12 +179,31 @@ async def submit_phase(
         phase = repository.get_phase(conn, key)
         if phase is None:
             return HTMLResponse(f"未知のフェーズです: {key}", status_code=404)
+        phase["key"] = key  # 差し戻し時もフォーム/リンクで使う。
 
-        targets_path = await _save_upload(targets)
-        cases_path = await _save_upload(cases)
+        # 拡張子検証（workbook は .xlsx、targets/cases は .csv）。不正なら差し戻す。
+        ext_errors = [
+            m for m in (
+                _bad_extension(workbook, {".xlsx"}),
+                _bad_extension(targets, {".csv"}),
+                _bad_extension(cases, {".csv"}),
+            ) if m
+        ]
+        if ext_errors:
+            ctx = _build_phase_context(conn, phase)
+            ctx.update({"errors": ext_errors, "submitted_body": body, "submitted_by": submitted_by})
+            return _TEMPLATES.TemplateResponse(request, "phase.html", ctx, status_code=400)
+
+        # アップロードは uploads/ に保存して控えを残す（優先順は pipeline 側で判定）。
+        workbook_path = await _save_upload(workbook, key)
+        targets_path = await _save_upload(targets, key)
+        cases_path = await _save_upload(cases, key)
 
         try:
-            result = run_phase_review(key, body, submitted_by, targets_path, cases_path)
+            result = run_phase_review(
+                key, body, submitted_by,
+                targets_path=targets_path, cases_path=cases_path, workbook_path=workbook_path,
+            )
         except TestcaseValidationError as e:
             # 検証エラーは 500 で落とさず、画面にメッセージを出して差し戻す。
             ctx = _build_phase_context(conn, phase)
@@ -165,15 +225,25 @@ def review_detail(request: Request, review_id: int):
             return HTMLResponse(f"レビューが見つかりません: {review_id}", status_code=404)
         phase = repository.get_phase_by_id(conn, review["phase_id"])
         coverage_metrics = repository.get_coverage_metrics(conn, review_id)
+        artifact = repository.get_artifact(conn, review["artifact_id"])
+        submitted_by = artifact["submitted_by"] if artifact else None
+        repository.ensure_qa4ai_table(conn)
+        qa4ai = repository.get_qa4ai_results(conn, review_id)
     finally:
         conn.close()
 
+    # 前回ラウンドとの比較（決定的・compare 経由。比較不可なら穏やかに表示）。
+    comparison = compare_phase(phase["key"])
+
     ctx = {
         "phase": phase,
+        "review_id": review_id,
         "round_no": review["round_no"],
         "status": review["status"],
         "coverage_target": phase["coverage_weight"] > 0,
         "coverage_metrics": coverage_metrics,
+        "comparison": comparison,
+        "qa4ai": qa4ai,
     }
 
     if review["status"] == "ok":
@@ -182,7 +252,8 @@ def review_detail(request: Request, review_id: int):
         recos = [TechniqueRecommendation(**r) for r in json.loads(review["recommendations"] or "[]")]
         passed, score_line = judge(review["total_score"], phase["pass_threshold"])
         review_text = compose_review(
-            review["acknowledgement"] or "", score_line, overall_findings, recos, review["closing"] or ""
+            review["acknowledgement"] or "", score_line, overall_findings, review["closing"] or "",
+            addressee=submitted_by,
         )
         ctx.update({
             "score_line": score_line,
@@ -193,6 +264,95 @@ def review_detail(request: Request, review_id: int):
         })
 
     return _TEMPLATES.TemplateResponse(request, "review.html", ctx)
+
+
+@app.get("/reviews/{review_id}/pdf")
+def review_pdf(review_id: int):
+    """レビュー所見＋QA4AI結果を PDF にして返す（保存値の整形のみ）。"""
+    conn = get_connection()
+    try:
+        if repository.get_review(conn, review_id) is None:
+            return HTMLResponse(f"レビューが見つかりません: {review_id}", status_code=404)
+    finally:
+        conn.close()
+
+    file_path = build_review_pdf(review_id, str(_EXPORT_DIR))
+    return FileResponse(
+        file_path, media_type="application/pdf", filename=Path(file_path).name
+    )
+
+
+@app.post("/reviews/{review_id}/qa4ai")
+def run_qa4ai(review_id: int):
+    """このレビューに対し rule（決定的）＋ grounding ＋ judge を実行し保存する。
+
+    点検結果は本体スコア・合否を書き換えない。LLM 失敗時も判定保留で落とさない。
+    """
+    conn = get_connection()
+    try:
+        review = repository.get_review(conn, review_id)
+        if review is None:
+            return HTMLResponse(f"レビューが見つかりません: {review_id}", status_code=404)
+        phase = repository.get_phase_by_id(conn, review["phase_id"])
+        repository.ensure_qa4ai_table(conn)
+
+        # スコアの無い回（manual_check）は点検対象外。そのまま戻す。
+        if review["status"] != "ok":
+            return RedirectResponse(url=f"/reviews/{review_id}", status_code=303)
+
+        # 保存値から所見テキスト・findings を復元（再採点しない）。
+        findings = json.loads(review["findings"] or "[]")
+        artifact = repository.get_artifact(conn, review["artifact_id"])
+        artifact_body = artifact["body"] if artifact else ""
+        submitted_by = artifact["submitted_by"] if artifact else None
+        _passed, score_line = judge(review["total_score"], phase["pass_threshold"])
+        review_text = compose_review(
+            review["acknowledgement"] or "", score_line, findings, review["closing"] or "",
+            addressee=submitted_by,
+        )
+        # judge には、エンジンが差し込むスコア行を除いた「語り本体」を渡す。
+        # スコア行は意図的な挿入であり、ペルソナの「点数を書かない」点検対象ではない。
+        review_text_no_score = compose_review(
+            review["acknowledgement"] or "", "", findings, review["closing"] or "",
+            addressee=submitted_by,
+        )
+        now = datetime.now(timezone.utc).isoformat()
+
+        # 1. ルール遵守（決定的・スコア行は除外して点検）。
+        violations = rule_check.check_rules(review_text, score_line)
+        repository.insert_qa4ai_result(
+            conn, review_id, "rule",
+            json.dumps({"violations": violations}, ensure_ascii=False), now,
+        )
+
+        # 2. 根拠の妥当性（LLM・失敗は判定保留で落とさない）。
+        try:
+            items = grounding.check_grounding(artifact_body, findings)
+        except Exception:
+            items = [
+                {"finding": f, "grounded": None, "reason": "判定保留（呼び出しに失敗しました）"}
+                for f in findings
+            ]
+        repository.insert_qa4ai_result(
+            conn, review_id, "grounding",
+            json.dumps({"items": items}, ensure_ascii=False), now,
+        )
+
+        # 3. LLM-as-judge（LLM・失敗は判定保留）。スコア行を除いた語り本体を評価する。
+        try:
+            judge_result = qa_judge.judge_review(review_text_no_score)
+        except Exception:
+            judge_result = {"status": "hold", "reason": "判定保留（呼び出しに失敗しました）"}
+        repository.insert_qa4ai_result(
+            conn, review_id, "judge",
+            json.dumps(judge_result, ensure_ascii=False), now,
+        )
+
+        conn.commit()
+    finally:
+        conn.close()
+
+    return RedirectResponse(url=f"/reviews/{review_id}", status_code=303)
 
 
 @app.get("/rubrics/{key}", response_class=HTMLResponse)

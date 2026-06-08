@@ -108,7 +108,10 @@ REVIEW_USER_TEMPLATE = """\
 # カバレッジの現在地（参考。数値はエンジンが算出済み。所見の語りに活かしてよいが、文面に点数は書かない）
 {coverage_note}
 
-# 成果物
+# 前フェーズの成果物（参考コンテキスト。今回の採点対象ではありません。流れの一貫性を見るための背景です）
+{prev_context_block}
+
+# 成果物（今回の採点対象）
 ----------------------------------------
 {artifact_body}
 ----------------------------------------
@@ -141,11 +144,13 @@ def build_messages(
     rubric_items: Iterable[Mapping[str, Any]],
     artifact_body: str,
     coverage_summary: str | None = None,
+    prev_context: str | None = None,
 ) -> list[dict[str, str]]:
     """OpenAI Chat 形式の messages を組み立てる。
 
     数値・合否判定はエンジン側で計算する前提のため、ここでは渡さない。
     coverage_summary は「参考情報」として語りに活かす用途のみ（任意）。
+    prev_context は前フェーズの成果物（参考背景。今回の採点対象ではない・任意）。
     """
     recommend = phase_key in TECHNIQUE_RECO_PHASES
     recommend_note = (
@@ -154,6 +159,10 @@ def build_messages(
         else "このフェーズは技法レコメンド対象外です。technique_recommendations は空配列にしてください。"
     )
     coverage_note = coverage_summary if coverage_summary else "（このフェーズでは参考カバレッジはありません）"
+    prev_context_block = (
+        prev_context if prev_context
+        else "（前フェーズの成果物はありません。今回の成果物のみで講評してください。）"
+    )
 
     user_content = REVIEW_USER_TEMPLATE.format(
         phase_name=phase_name,
@@ -161,6 +170,7 @@ def build_messages(
         rubric_items_block=format_rubric_items(rubric_items),
         recommend_note=recommend_note,
         coverage_note=coverage_note,
+        prev_context_block=prev_context_block,
         artifact_body=artifact_body,
     )
 

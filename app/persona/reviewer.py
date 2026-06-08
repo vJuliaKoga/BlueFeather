@@ -30,16 +30,39 @@ class ReviewResult:
 
 def _call_llm(messages: list[dict]) -> str:
     """OpenAI を呼び、本文テキストを返す薄いラッパ。呼び出しはここだけに閉じる。"""
+    import time
+
     from openai import OpenAI
 
     settings = get_settings()
     client = OpenAI(api_key=settings.openai_api_key)
+    start = time.perf_counter()
     resp = client.chat.completions.create(
         model=settings.openai_model,
         messages=messages,
         # JSON を要求するが、抽出・検証側はこれに依存しない。
         response_format={"type": "json_object"},
     )
+    duration = time.perf_counter() - start
+
+    # メタ記録（best-effort）。プロンプト本文・キーは残さない。記録失敗でも止めない。
+    try:
+        from app.qa4ai import trace
+
+        usage = getattr(resp, "usage", None)
+        trace.record_trace(
+            {
+                "purpose": "llm_call",
+                "model": settings.openai_model,
+                "duration_sec": round(duration, 3),
+                "prompt_tokens": getattr(usage, "prompt_tokens", None),
+                "completion_tokens": getattr(usage, "completion_tokens", None),
+                "total_tokens": getattr(usage, "total_tokens", None),
+            }
+        )
+    except Exception:
+        pass
+
     return resp.choices[0].message.content or ""
 
 
@@ -84,8 +107,12 @@ def run_review(
     phase_key: str,
     artifact_body: str,
     coverage_summary: str | None = None,
+    prev_context: str | None = None,
 ) -> ReviewResult:
-    """DB から phase 名と rubric_items を引き、メッセージを組んでレビューする。"""
+    """DB から phase 名と rubric_items を引き、メッセージを組んでレビューする。
+
+    prev_context は前フェーズの成果物（参考背景・任意）。採点対象ではない。
+    """
     conn = get_connection()
     try:
         row = conn.execute(
@@ -111,6 +138,7 @@ def run_review(
         rubric_items=rubric_items,
         artifact_body=artifact_body,
         coverage_summary=coverage_summary,
+        prev_context=prev_context,
     )
     return review_messages(messages)
 

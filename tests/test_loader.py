@@ -6,7 +6,9 @@ import pytest
 
 from app.ingest.testcase_loader import (
     TestcaseValidationError,
+    extract_workbook_text,
     load_from_csv,
+    load_from_xlsx,
 )
 
 # 検証用の列順。
@@ -25,6 +27,39 @@ def test_load_samples_ok():
     targets, cases = load_from_csv("samples/targets.csv", "samples/cases.csv")
     assert len(targets) == 8
     assert len(cases) == 6
+
+
+def _arbitrary_workbook(path):
+    # targets/cases テンプレに一致しない、工程ごとに異なる成果物Excelを模す。
+    from openpyxl import Workbook
+
+    wb = Workbook()
+    ws1 = wb.active
+    ws1.title = "機能一覧"
+    ws1.append(["機能名", "説明"])
+    ws1.append(["ログイン", "ID/PWで認証する"])
+    ws2 = wb.create_sheet("テストスイート一覧")
+    ws2.append(["#", "観点", "手順", "期待値"])
+    ws2.append(["TC-001", "新規登録", "新規登録リンクを押す", "登録画面が出る"])
+    wb.save(path)
+
+
+def test_extract_workbook_text_arbitrary(tmp_path):
+    p = tmp_path / "deliverable.xlsx"
+    _arbitrary_workbook(str(p))
+    text = extract_workbook_text(str(p))
+    # 全シートが見出し付きでテキスト化され、内容が含まれる。
+    assert "## シート: 機能一覧" in text
+    assert "## シート: テストスイート一覧" in text
+    assert "TC-001" in text and "ログイン" in text
+
+
+def test_arbitrary_workbook_rejected_by_strict_loader(tmp_path):
+    # 固定テンプレ（targets/cases）としては弾かれる＝パイプラインが汎用抽出へフォールバックする根拠。
+    p = tmp_path / "deliverable.xlsx"
+    _arbitrary_workbook(str(p))
+    with pytest.raises(TestcaseValidationError):
+        load_from_xlsx(str(p))
 
 
 def test_undefined_reference(tmp_path):

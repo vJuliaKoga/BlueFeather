@@ -49,7 +49,48 @@ python -m app.db.init
 
 フェーズ定義とルーブリック配点が `app/settings/*.yaml` から投入されます。再実行しても重複しません（冪等）。
 
+## 通し確認（提出 → あと一歩 → 再提出 → エクスポート）
+
+「提出 → あと一歩 → 改善して再提出 → エクスポート」を一気通貫で確認できます（コマンドは PowerShell 前提）。
+
+```powershell
+$env:OPENAI_API_KEY = "（各自のキー）"
+uvicorn app.main:app --reload
+```
+
+1. `detailed_design` のフェーズ画面で、成果物本文に `samples/artifact.md` の内容、
+   targets に `samples/targets.csv`、cases に `samples/cases.csv` を添えて提出します。
+   `cases.csv` は一部の target しか網羅していないため、カバレッジが下がり「あと一歩」になります。
+2. 同じフェーズに、cases を `samples/cases_full.csv` に差し替えて再提出します（全 target をカバー）。
+   カバレッジは 100 に上がります。
+3. フェーズ画面の「証跡をエクスポート（Markdown / JSON）」から履歴をダウンロードします。
+   CLI でも書き出せます。
+
+```powershell
+python -m app.engine.export --phase detailed_design --format md   --out exports/
+python -m app.engine.export --phase detailed_design --format json --out exports/
+```
+
+> 注記: 合否（開門）の最終判定はカバレッジに加え、LLM のルーブリック採点にも依ります。
+> このため、再提出で必ず開門するとは限りません。一方で、カバレッジが 100 に上がることは
+> 決定的に確認できます（下記）。
+
+```powershell
+# cases_full でカバレッジが 100 になることを決定的に確認
+python -m app.engine.coverage --targets samples/targets.csv --cases samples/cases_full.csv
+# 期待: 全技法 rate 1.00、coverage_score = 100.00
+```
+
+## 持ち寄り（証跡の集約）
+
+各自ローカル型のため、提出証跡は各自が書き出して持ち寄り、まとめ役が集約します。
+
+- 各自: フェーズごとに `python -m app.engine.export --phase <key> --format md|json --out exports/`
+  （`--phase all` で全フェーズを一括書き出し）。
+- まとめ役: 集めた JSON を機械的に集約する／Markdown を読みやすく束ねる。
+- エクスポートは決定的です（DB の保存値を整形するだけ。再採点・LLM 呼び出しはしません）。
+  キーや機微情報は出力ファイルに含めません。
+
 ## 注記
 
-- UI 起動・レビュー機能は後続フェーズ（P5）で追加されます。現時点では雛形・設定・DB初期化までです。
-- 各自ローカル型です。履歴は各自の端末にローカル保存されます。提出証跡は後でエクスポートして持ち寄る運用とします。
+- 各自ローカル型です。履歴は各自の端末にローカル保存されます。提出証跡はエクスポートして持ち寄る運用とします。

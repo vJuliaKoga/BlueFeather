@@ -36,20 +36,26 @@
 <h2>成果物の提出</h2>
 <div class="card">
   <form method="post" action="/phases/{{ phase.key }}/submit" enctype="multipart/form-data">
-    <label for="body">成果物本文</label>
-    <textarea id="body" name="body" required>{{ submitted_body or "" }}</textarea>
+    <label for="body">成果物本文（Excel / CSV を添付する場合は任意）</label>
+    <textarea id="body" name="body" placeholder="本文を入力、または下のExcel / CSVを添付してください。Excelを出す場合は本文は空でも構いません。">{{ submitted_body or "" }}</textarea>
 
     <label for="submitted_by">提出者名</label>
     <input type="text" id="submitted_by" name="submitted_by" value="{{ submitted_by or "" }}" required>
 
-    {% if coverage_target %}
+    {% if coverage_enabled %}
+    <p class="muted">このフェーズはカバレッジ対象です。Excel1ファイルでも、CSV2ファイルでも提出できます。両方ある場合はExcelを優先します。</p>
+    {% else %}
+    <p class="muted">成果物の補助として、Excel（targets / cases の2シート）または CSV を添付できます。両方ある場合はExcelを優先します。（このフェーズはカバレッジ採点の対象外で、ファイルは控えとして保存されます。）</p>
+    {% endif %}
+
+    <label for="workbook">Excel ファイル（targets / cases の2シート・.xlsx）</label>
+    <input type="file" id="workbook" name="workbook" accept=".xlsx">
+
     <label for="targets">targets ファイル（CSV）</label>
     <input type="file" id="targets" name="targets" accept=".csv">
 
     <label for="cases">cases ファイル（CSV）</label>
     <input type="file" id="cases" name="cases" accept=".csv">
-    <p class="muted">このフェーズはカバレッジ対象です。targets / cases を添えると内訳も算出します。</p>
-    {% endif %}
 
     <button type="submit">提出して所見を受け取る</button>
   </form>
@@ -77,4 +83,14 @@
   <p class="muted">まだ提出はありません。最初の一歩を、いつでもどうぞ。</p>
   {% endif %}
 </div>
+
+{% if history %}
+<h2>証跡をエクスポート</h2>
+<div class="card">
+  <p class="muted">このフェーズの履歴を提出証跡として書き出します（決定的・キーは含みません）。</p>
+  <a href="/phases/{{ phase.key }}/export?format=md">Markdown</a>
+  ｜
+  <a href="/phases/{{ phase.key }}/export?format=json">JSON</a>
+</div>
+{% endif %}
 {% endblock %}

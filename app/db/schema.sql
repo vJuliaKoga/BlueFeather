@@ -29,3 +29,8 @@ CREATE TABLE IF NOT EXISTS gate_status (
   phase_id INTEGER PRIMARY KEY REFERENCES phases(id),
   current_round INTEGER, closed INTEGER, closed_at TEXT
 );
+-- QA4AI（レビューAIの出力点検）の結果。本体スコア・合否は書き換えない独立記録。
+CREATE TABLE IF NOT EXISTS qa4ai_results (
+  id INTEGER PRIMARY KEY, review_id INTEGER REFERENCES reviews(id),
+  check_type TEXT, result_json TEXT, created_at TEXT
+);

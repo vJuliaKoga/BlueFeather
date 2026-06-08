@@ -202,3 +202,33 @@ def load_from_xlsx(xlsx_path: str) -> tuple[list[Target], list[Case]]:
     finally:
         wb.close()
     return _assemble(target_header, case_header, target_rows, case_rows)
+
+
+def extract_workbook_text(xlsx_path: str, max_chars: int = 60000) -> str:
+    """任意レイアウトのワークブックを、レビュー用に読めるテキストへ抽出する。
+
+    工程ごとにテンプレートが異なる成果物Excel（固定の targets/cases に一致しないもの）を、
+    全シート・全行から非空セルを拾って「シートごとの箇条書き」に整形する。
+    検証・カバレッジは行わない（決定的なテキスト化のみ）。長すぎる場合は末尾を省略する。
+    """
+    from openpyxl import load_workbook
+
+    wb = load_workbook(xlsx_path, read_only=True, data_only=True)
+    try:
+        parts: list[str] = []
+        for name in wb.sheetnames:
+            parts.append(f"## シート: {name}")
+            for row in wb[name].iter_rows(values_only=True):
+                cells = [_clean(c) for c in row]
+                # 結合セル由来の空セルが多いので、非空セルだけを区切って1行にする。
+                line = " | ".join(c for c in cells if c != "")
+                if line:
+                    parts.append(line)
+            parts.append("")
+    finally:
+        wb.close()
+
+    text = "\n".join(parts).strip()
+    if len(text) > max_chars:
+        text = text[:max_chars] + "\n…（以下省略）"
+    return text
